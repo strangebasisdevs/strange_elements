@@ -1,0 +1,33 @@
+{
+  "name": "strange-elements",
+  "version": "1.0.0",
+  "description": "Interactive atomic nucleus visualizer built with p5.js",
+  "main": "index.html",
+  "scripts": {
+    "start": "live-server --port=3000 --open=/",
+    "dev": "live-server --port=3000 --open=/",
+    "serve": "python -m http.server 8000"
+  },
+  "keywords": [
+    "p5js",
+    "atomic",
+    "nucleus",
+    "visualization",
+    "chemistry",
+    "physics",
+    "education",
+    "interactive"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/strange-elements.git"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
