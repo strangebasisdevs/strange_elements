@@ -1,140 +1,114 @@
 // p5.js sketch for nucleus visualization
-let particles = [];
+let particles = []; // This will now store simple data objects, not Particle instances
 let canvasSize = 400;
-let centerX, centerY;
-let nucleusRadius = 120;
+
+// Physics constants are now primarily used in the worker.
+// They are kept here for reference or if needed for non-worker logic.
+const NUCLEUS_RADIUS = 120;
+const PROTON_REPULSION = 0.5;
+const CONTAINMENT_FORCE = 0.005;
+const DAMPING = 0.98;
+
+// The Particle class and physics logic have been moved to physics-worker.js
+let physicsWorker;
+
+let fpsHistory = [];
+const fpsHistoryLength = 30; // Average over 30 frames
 
 function setup() {
-  // Create canvas and parent it to the container
-  let canvas = createCanvas(canvasSize, canvasSize);
+  let canvas = createCanvas(canvasSize, canvasSize, WEBGL);
   canvas.parent('canvas-container');
   
-  centerX = width / 2;
-  centerY = height / 2;
+  // Initialize the physics worker
+  physicsWorker = new Worker('physics-worker.js');
   
+  // Listen for messages (updated particle positions) from the worker
+  physicsWorker.onmessage = (e) => {
+    // Store the latest particle data for rendering
+    particles = e.data;
+  };
+
   // Initialize with the first element (Hydrogen)
-  resetNucleus();
+  resetNucleus(true); // Pass true to start the worker's loop
 }
 
 function draw() {
-  // Dark background
   background(0);
   
-  // Draw nucleus boundary (faint circle)
+  // --- FPS Calculation ---
+  const currentFps = frameRate();
+  fpsHistory.push(currentFps);
+  if (fpsHistory.length > fpsHistoryLength) {
+    fpsHistory.shift();
+  }
+  const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
+  
+  // Display FPS stats
+  if (document.getElementById('fps-current')) {
+    document.getElementById('fps-current').textContent = currentFps.toFixed(1);
+    document.getElementById('fps-avg').textContent = avgFps.toFixed(1);
+  }
+  
+  // Add subtle rotation to the whole scene for a better 3D feel
+  rotateY(frameCount * 0.002);
+  rotateX(frameCount * 0.001);
+
+  // Draw nucleus boundary (faint sphere)
   stroke(255, 255, 255, 30);
-  strokeWeight(2);
+  strokeWeight(1);
   noFill();
-  circle(centerX, centerY, nucleusRadius * 2);
-  
-  // Update and draw particles
-  for (let particle of particles) {
-    updateParticle(particle);
-    drawParticle(particle);
+  sphere(NUCLEUS_RADIUS);
+
+  // --- Render Loop ---
+  // The simulation runs in the background. The draw loop only renders.
+  if (!particles || particles.length === 0) return;
+
+  // Render all particles at their latest known positions
+  for (let p of particles) {
+    push();
+    translate(p.pos.x, p.pos.y, p.pos.z);
+
+    // Set particle color
+    if (p.type === 'proton') {
+      fill(255, 68, 68);
+      stroke(255, 100, 100);
+    } else {
+      fill(59, 130, 246);
+      stroke(100, 150, 255);
+    }
+    
+    strokeWeight(1);
+    sphere(12); // Use fixed size
+
+    pop();
   }
 }
 
-function resetNucleus() {
-  particles = [];
-  
+function resetNucleus(startWorker = false) {
+  particles = []; // Clear local particles immediately for a snappy UI
   if (!selectedElement) return;
-  
-  const totalParticles = selectedElement.protons + selectedElement.neutrons;
-  
-  // Create particles in a rough spherical arrangement
-  for (let i = 0; i < totalParticles; i++) {
-    const isProton = i < selectedElement.protons;
-    
-    // Distribute particles in layers for better visualization
-    const layer = Math.floor(i / 6); // Roughly 6 particles per layer
-    const particlesInLayer = Math.min(6, totalParticles - layer * 6);
-    const angleStep = TWO_PI / particlesInLayer;
-    const angle = (i % 6) * angleStep + layer * 0.5; // Offset each layer
-    
-    const radius = 25 + layer * 20; // Increase radius for each layer
-    
-    particles.push({
-      x: centerX + cos(angle) * radius,
-      y: centerY + sin(angle) * radius,
-      angle: angle,
-      baseRadius: radius,
-      type: isProton ? 'proton' : 'neutron',
-      speed: random(0.015, 0.025), // Slight variation in rotation speed
-      wobblePhase: random(TWO_PI), // Random wobble phase
-      size: 12
-    });
-  }
-}
 
-function updateParticle(particle) {
-  // Update rotation angle
-  particle.angle += particle.speed;
-  
-  // Add slight wobble for more organic movement
-  particle.wobblePhase += 0.05;
-  const wobble = sin(particle.wobblePhase) * 5;
-  
-  // Calculate new position with wobble
-  const currentRadius = particle.baseRadius + wobble;
-  particle.x = centerX + cos(particle.angle) * currentRadius;
-  particle.y = centerY + sin(particle.angle) * currentRadius;
-}
-
-function drawParticle(particle) {
-  push();
-  
-  // Set particle color and glow
-  if (particle.type === 'proton') {
-    // Red for protons
-    fill(255, 68, 68);
-    stroke(255, 68, 68);
-  } else {
-    // Blue for neutrons
-    fill(59, 130, 246);
-    stroke(59, 130, 246);
-  }
-  
-  // Draw glow effect
-  strokeWeight(8);
-  stroke(red(get(particle.x, particle.y)), green(get(particle.x, particle.y)), blue(get(particle.x, particle.y)), 50);
-  noFill();
-  circle(particle.x, particle.y, particle.size + 8);
-  
-  // Draw main particle
-  strokeWeight(2);
-  if (particle.type === 'proton') {
-    stroke(255, 100, 100);
-    fill(255, 68, 68);
-  } else {
-    stroke(100, 150, 255);
-    fill(59, 130, 246);
-  }
-  circle(particle.x, particle.y, particle.size);
-  
-  // Draw particle label
-  fill(255);
-  noStroke();
-  textAlign(CENTER, CENTER);
-  textSize(8);
-  textFont('Arial', 8);
-  text(particle.type === 'proton' ? 'p+' : 'n', particle.x, particle.y);
-  
-  pop();
+  // Tell the worker to reset its simulation
+  physicsWorker.postMessage({
+    type: 'reset',
+    element: {
+      protons: selectedElement.protons,
+      neutrons: selectedElement.neutrons
+    },
+    start: startWorker
+  });
 }
 
 // Handle window resize
 function windowResized() {
-  // Keep canvas size responsive but maintain aspect ratio
   const container = document.getElementById('canvas-container');
   const containerWidth = container.clientWidth;
-  const newSize = Math.min(containerWidth - 40, 400); // Max 400px, with padding
+  const newSize = Math.min(containerWidth - 40, 400);
   
   if (newSize !== canvasSize) {
     canvasSize = newSize;
     resizeCanvas(canvasSize, canvasSize);
-    centerX = width / 2;
-    centerY = height / 2;
-    nucleusRadius = canvasSize * 0.3;
-    resetNucleus(); // Recalculate particle positions
+    // No need to reset nucleus on resize, as positions are relative to center
   }
 }
 

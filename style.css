@@ -255,6 +255,19 @@ header p {
     background: #000;
     border-radius: 8px;
     overflow: hidden;
+    position: relative; /* Needed for positioning stats */
+}
+
+#stats-container {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-size: 12px;
+  color: #aaa;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 /* Embed section */
