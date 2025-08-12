@@ -34,7 +34,9 @@ class Vector {
 const NUCLEUS_RADIUS = 120;
 const PROTON_REPULSION = 0.5;
 const CONTAINMENT_FORCE = 0.005;
-const DAMPING = 0.98;
+const DAMPING = 0.99;
+// Minimum random jitter force to keep particles moving
+const MIN_FORCE = 0.12;
 
 // --- Classes (Particle, ParticleGrid) ---
 // Note: These are copied from sketch.js, but use the worker's Vector class
@@ -141,6 +143,10 @@ function runSimulation() {
     }
   }
 
+  // 2b. Apply minimum random jitter to keep motion
+  for (let p of particles) {
+    p.applyForce(Vector.random3D().mult(MIN_FORCE));
+  }
   // 3. Update particles and prepare data for sending
   const particleData = [];
   for (let p of particles) {
