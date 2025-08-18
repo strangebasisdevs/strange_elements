@@ -187,9 +187,19 @@ body {
 5. Push to branch: git push origin feature-name
 6. Create a Pull Request
 
-## 📄 License
+## License
 
-MIT License - Feel free to use for educational purposes, personal projects, or commercial applications.
+This project is licensed under the GNU AFFERO General Public License Version 3 (AGPL-3.0).
+
+I encourage you to use, modify, and share this project! Under the terms of this license:
+
+- You must disclose the source code when you share the software
+- If you modify the code, those modifications must also be released under AGPL-3.0
+- If you run a modified version on a server and allow users to interact with it remotely (e.g., through a web browser), you must also make your modified source code available to those users
+- You must include the original copyright notice and license
+- There is no warranty for the program
+
+For the full license text, see the [LICENSE](LICENSE) file in this repository or visit [GNU AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html).
 
 ## 🎓 Educational Use
 
